@@ -1,0 +1,33 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Список медиа</title>
+</head>
+<body>
+<h1>Мои медиа</h1>
+<a href="/media/upload">Загрузить новое медиа</a>
+<table>
+  <tr>
+    <th>ID</th>
+    <th>Название</th>
+    <th>Статус</th>
+    <th>Действия</th>
+  </tr>
+  <tr th:each="media : ${mediaList}">
+    <td th:text="${media.id}"></td>
+    <td th:text="${media.name}"></td>
+    <td>
+      <span th:if="${!media.ready}">Пока не обработано</span>
+      <span th:if="${media.ready}">Готово</span>
+    </td>
+    <td>
+      <a th:href="@{'/media/' + ${media.id}}">Запустить плеер</a>
+      <form th:action="@{'/media/' + ${media.id} + '/delete'}" method="post" style="display:inline;">
+        <button type="submit">Удалить</button>
+      </form>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

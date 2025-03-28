@@ -1,0 +1,28 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Загрузка медиа</title>
+</head>
+<body>
+  <h1>Загрузка видео и аудио</h1>
+  <form method="post" action="/media/" enctype="multipart/form-data">
+    <div>
+      <label for="mediaTitle">Название медиа:</label>
+      <input type="text" id="mediaTitle" name="mediaTitle" required>
+    </div>
+    <br/>
+    <div>
+      <label for="videoFile">Видео файл:</label>
+      <input type="file" id="videoFile" name="videoFile" accept="video/*" required>
+    </div>
+    <br/>
+    <div>
+      <label for="audioFiles">Аудио файлы (несколько):</label>
+      <input type="file" id="audioFiles" name="audioFiles" accept="audio/*" multiple required>
+    </div>
+    <br/>
+    <button type="submit">Загрузить</button>
+  </form>
+</body>
+</html>

@@ -1,0 +1,98 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Плеер: <span th:text="${media.name}">Media Player</span></title>
+    <!-- Подключаем hls.js для воспроизведения HLS-потока -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+<h1 th:text="${media.name}">Media Title</h1>
+<video id="videoPlayer" width="640" height="360" controls autoPlay>
+    Ваш браузер не поддерживает видео.
+</video>
+<div>
+    <h3>Аудиодорожки:</h3>
+    <ul>
+        <li th:each="audio,iStat : ${media.audioTracks}">
+            <span th:text="${audio.name}">Audio Track</span>
+            <audio th:id="'audioPlayer_' + ${iStat.index}">
+                Ваш браузер не поддерживает аудио.
+            </audio>
+            <button th:id ="'audioPlayerMute_' + ${iStat.index}">Mute</button>
+            <button th:id ="'audioPlayerSolo_' + ${iStat.index}" >Solo</button>
+        </li>
+    </ul>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const media = [[${media}]];
+    /*]]>*/
+</script>
+
+<script>
+    const video = document.getElementById('videoPlayer');
+    videoHls = initHlsPlayer(video, media.videoTrack.streamUrl);
+
+    const audioPlayers = document.querySelectorAll('audio[id^="audioPlayer_"]');
+    audioPlayers.forEach((audioPlayer, index) => {
+        const audioTrack = media.audioTracks[index];
+        if (audioTrack) {
+            initHlsPlayer(audioPlayer, audioTrack.streamUrl);
+        }
+        const muteButton = document.getElementById(`audioPlayerMute_${index}`);
+        const soloButton = document.getElementById(`audioPlayerSolo_${index}`);
+
+        muteButton.addEventListener('click', () => {
+            audioPlayer.muted = !audioPlayer.muted;
+            muteButton.textContent = audioPlayer.muted ? 'Unmute' : 'Mute';
+        });
+
+        soloButton.addEventListener('click', () => {
+            audioPlayers.forEach((otherAudioPlayer, otherIndex) => {
+                if (otherIndex !== index) {
+                    otherAudioPlayer.muted = true;
+                }
+            });
+            audioPlayer.muted = false;
+        });
+    });
+
+    video.onplay = function() {
+        audioPlayers.forEach((audioPlayer) => {
+            audioPlayer.currentTime = video.currentTime;
+            audioPlayer.play();
+        });
+    };
+
+    video.onpause = function() {
+        audioPlayers.forEach((audioPlayer) => {
+            audioPlayer.pause();
+        });
+    };
+
+    video.onended = function() {
+        audioPlayers.forEach((audioPlayer) => {
+            audioPlayer.pause();
+        });
+    };
+
+    function initHlsPlayer(element, url) {
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(url);
+            hls.attachMedia(element);
+            return hls;
+        } else if (element.canPlayType('application/vnd.apple.mpegurl') || element.canPlayType('application/x-mpegURL')) {
+            element.src = url;
+            return null;
+        } else {
+            console.error('Ваш браузер не поддерживает HLS');
+            return null;
+        }
+    }
+</script>
+<a href="/media/">Вернуться к списку медиа</a>
+</body>
+</html>

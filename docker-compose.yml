@@ -1,0 +1,46 @@
+﻿services:
+  spring-boot:
+    build: .
+    profiles:
+      - prod
+    ports:
+      - 8080:8080
+    depends_on:
+      - redis
+      - minio
+    environment:
+      # Параметры для подключения к MinIO
+      - MINIO_URL=http://minio:9000
+      - MINIO_ACCESS_KEY=minio_access_key
+      - MINIO_SECRET_KEY=minio_secret_key
+      # Параметры для подключения к Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+
+  redis:
+    image: redis:latest
+    command: redis-server
+    ports:
+      - 6379:6379
+    environment:
+      REDIS_PASSWORD: ""
+    volumes:
+      - redis-data:/data
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    restart: always
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: root_password
+    volumes:
+      - minio-data:/data
+
+volumes:
+  redis-data:
+  minio-data:
