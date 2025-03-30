@@ -95,12 +95,12 @@ open class MediaTrackEncoderTask(private val sourceFile: File, private val targe
     }
 
     private fun findFfmpeg(): File? {
+        val isWindows = System.getProperty("os.name").lowercase().contains("win")
+
         val pathsToTest = listOf(
             ffmpegPath,
             System.getenv("FFMPEG_PATH")
-        ) + System.getenv("PATH").split(";")
-
-        val isWindows = System.getProperty("os.name").lowercase().contains("win")
+        ) + System.getenv("PATH").split(if (isWindows) ";" else ":").map { it.trim() }
 
         return pathsToTest.firstNotNullOfOrNull {
             val file = File(it, "ffmpeg" + if (isWindows) ".exe" else "")

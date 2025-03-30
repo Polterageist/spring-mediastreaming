@@ -47,6 +47,7 @@
         muteButton.addEventListener('click', () => {
             audioPlayer.muted = !audioPlayer.muted;
             muteButton.textContent = audioPlayer.muted ? 'Unmute' : 'Mute';
+            audioPlayer.currentTime = video.currentTime;
         });
 
         soloButton.addEventListener('click', () => {
@@ -56,6 +57,7 @@
                 }
             });
             audioPlayer.muted = false;
+            audioPlayer.currentTime = video.currentTime;
         });
     });
 
@@ -77,6 +79,24 @@
             audioPlayer.pause();
         });
     };
+
+    // Событие timeupdate: постоянно корректируем аудио дорожки, если возникает рассинхронизация
+    video.addEventListener('timeupdate', function() {
+        const videoTime = video.currentTime;
+        audioPlayers.forEach((audioPlayer) => {
+            if (!audioPlayer.paused && Math.abs(audioPlayer.currentTime - videoTime) > 30) {
+                audioPlayer.currentTime = videoTime;
+            }
+        });
+    });
+
+    // Событие seeking: моментально синхронизируем аудио при перемотке видео
+    video.addEventListener('seeking', function() {
+        const videoTime = video.currentTime;
+        audioPlayers.forEach((audioPlayer) => {
+            audioPlayer.currentTime = videoTime;
+        });
+    });
 
     function initHlsPlayer(element, url) {
         if (Hls.isSupported()) {
