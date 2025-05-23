@@ -111,7 +111,7 @@ class MediaService(
     fun getIndexStream(request: HttpServletRequest, mediaId: Long, fileName: String): StreamingResponseBody {
         logger.info("Getting index stream for mediaId: $mediaId, fileName: $fileName")
         val objectName = getMediaObjectPrefix(mediaId, fileName) + "index.m3u8"
-        val tsPrefix = getStreamUri(request, mediaId, fileName)
+        val segmentPrefix = getStreamUri(request, mediaId, fileName)
 
         val objectStream = getObjectStream(objectName)
 
@@ -125,8 +125,8 @@ class MediaService(
         return StreamingResponseBody { outputStream ->
             try {
                 reader.forEachLine { line ->
-                    if (line.endsWith(".ts"))
-                        outputStream.write("$tsPrefix/$line".toByteArray())
+                    if (line.startsWith("segment-"))
+                        outputStream.write("$segmentPrefix/$line".toByteArray())
                     else
                         outputStream.write(line.toByteArray())
                     outputStream.write(System.lineSeparator().toByteArray())

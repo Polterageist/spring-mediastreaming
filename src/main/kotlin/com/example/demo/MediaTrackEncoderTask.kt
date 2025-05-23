@@ -38,28 +38,29 @@ open class MediaTrackEncoderTask(private val sourceFile: File, private val targe
                 targetPath.mkdirs()
             }
 
-            val process = ProcessBuilder()
-                .command(ffmpegHlsCommand(sourceFile))
-                .directory(targetPath)
-                .start()
+            val contentTypeOutput = StringBuilder()
+            val contentTypeExitCode = runProcess(ffProbeContentTypeCommand(sourceFile), contentTypeOutput)
+            if (contentTypeExitCode != 0) {
+                throw MediaEncoderException("FFprobe process failed with exit code $contentTypeExitCode")
+            }
 
-            Thread {
-                BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
-                    reader.lines().forEach { line ->
-                        logger.info(line)
-                    }
+            val mediaType = contentTypeOutput.toString().trim()
+            logger.info("Content type: $mediaType")
+
+            var ffmpegCommand: List<String> = emptyList()
+            when (mediaType) {
+                "video" -> {
+                    ffmpegCommand = ffmpegHlsCommand(sourceFile)
                 }
-            }.start()
-
-            Thread {
-                BufferedReader(InputStreamReader(process.errorStream)).use { reader ->
-                    reader.lines().forEach { line ->
-                        logger.info(line)
-                    }
+                "audio" -> {
+                    ffmpegCommand = ffmpegSegmentCommand(sourceFile)
                 }
-            }.start()
+                else -> {
+                    throw MediaEncoderException("Unsupported media type: $mediaType")
+                }
+            }
 
-            val exitCode = process.waitFor()
+            val exitCode = runProcess(ffmpegCommand, null)
             if (exitCode != 0) {
                 logger.error("FFmpeg process exited with code $exitCode")
                 throw MediaEncoderException("FFmpeg process failed with exit code $exitCode")
@@ -70,16 +71,47 @@ open class MediaTrackEncoderTask(private val sourceFile: File, private val targe
                 throw MediaEncoderException("Target file not found: ${indexFile.absolutePath}")
             }
 
-            val chunkFiles = targetPath.listFiles { _, name -> name.endsWith(".ts") }?.toList() ?: emptyList()
+            val chunkFiles = targetPath.listFiles { _, name -> name.startsWith("segment-") }?.toList() ?: emptyList()
             if (chunkFiles.isEmpty()) {
                 throw MediaEncoderException("No chunk files found in target directory")
             }
 
-            val contentType = "application/vnd.apple.mpegurl"
+            var contentType = "application/vnd.apple.mpegurl"
+            if (mediaType == "video") {
+                contentType = "video/vnd.apple.mpegurl"
+            } else if (mediaType == "audio") {
+                contentType = "audio/vnd.apple.mpegurl"
+            }
             return ProcessedMediaFile(contentType, indexFile, chunkFiles)
         } catch (e: Exception) {
             throw MediaEncoderException("Error processing media file: ${e.message}")
         }
+    }
+
+    private fun runProcess(command: List<String>, output: StringBuilder?): Int {
+        val processBuilder = ProcessBuilder(command)
+        processBuilder.directory(targetPath)
+        processBuilder.redirectErrorStream(true)
+        val process = processBuilder.start()
+
+        BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
+            reader.lines().forEach { line ->
+                logger.info(line)
+                output?.append(line)?.append("\n")
+            }
+        }
+
+        return process.waitFor()
+    }
+
+    private fun ffProbeContentTypeCommand(source: File): List<String> {
+        return listOf(
+            ffmpegRoot!!.absolutePath + "/ffprobe",
+            "-v", "error",
+            "-show_entries", "stream=codec_type",
+            "-of", "csv=p=0",
+            source.absolutePath
+        )
     }
 
     private fun ffmpegHlsCommand(source: File): List<String> {
@@ -89,8 +121,23 @@ open class MediaTrackEncoderTask(private val sourceFile: File, private val targe
             "-c:v", "h264",
             "-hls_time", "10",
             "-hls_list_size", "0",
-            "-hls_segment_filename", "%d.ts",
+            "-hls_segment_filename", "segment-%03d.ts",
             "index.m3u8"
+        )
+    }
+
+    private fun ffmpegSegmentCommand(source: File): List<String> {
+        return listOf(
+            ffmpegRoot!!.absolutePath + "/ffmpeg",
+            "-i", source.absolutePath,
+            "-f", "segment",
+            "-ar", "44100",
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-segment_time", "5",
+            "-segment_list", "index.m3u8",
+            "-segment_format", "aac", "segment-%03d.aac",
+            "-segment_time_delta", "0"
         )
     }
 

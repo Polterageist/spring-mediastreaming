@@ -43,7 +43,7 @@ class MediaStreamController(val mediaService: MediaService) {
     }
 
     @RequestMapping(
-        path = ["/{mediaId}/{fileName}/{segment}.ts"],
+        path = ["/{mediaId}/{fileName}/{segment}"],
         method = [RequestMethod.GET],
         produces = [MediaType.APPLICATION_OCTET_STREAM_VALUE]
     )
@@ -52,11 +52,12 @@ class MediaStreamController(val mediaService: MediaService) {
               @PathVariable(value = "segment", required = true) segment: String): ResponseEntity<StreamingResponseBody> {
         logger.info("Getting segment: $segment")
         try {
-            val stream = mediaService.getSegmentStream(mediaId, fileName, "$segment.ts")
+            val stream = mediaService.getSegmentStream(mediaId, fileName, segment)
 
             val headers = HttpHeaders()
-            headers.set(HttpHeaders.CONTENT_TYPE, "video/vnd.apple.mpegurl") // Correct MIME type for audio
-            headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=$segment.ts")
+            val content_type = if (segment.endsWith(".ts")) "video/vnd.apple.mpegurl" else "audio/vnd.apple.mpegurl"
+            headers.set(HttpHeaders.CONTENT_TYPE, content_type) // Correct MIME type for audio
+            headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=$segment")
 
             return ResponseEntity(stream, headers, HttpStatus.OK)
         } catch (e: Exception) {
