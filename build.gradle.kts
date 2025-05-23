@@ -4,6 +4,7 @@ plugins {
 	id("org.springframework.boot") version "3.4.4"
 	id("io.spring.dependency-management") version "1.1.7"
 }
+
 val springCloudVersion by extra("2024.0.1")
 
 group = "com.example"
@@ -46,6 +47,16 @@ dependencyManagement {
 	imports {
 		mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
 	}
+}
+
+val copyFrontend by tasks.registering(Copy::class) {
+	dependsOn(":frontend:npmBuild")
+	from("frontend/dist")
+	into("src/main/resources/static")
+}
+
+tasks.named("bootJar") {
+	dependsOn(copyFrontend)
 }
 
 tasks.withType<Test> {

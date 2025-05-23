@@ -4,7 +4,6 @@ import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
-import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -21,8 +20,7 @@ class MediaStreamController(val mediaService: MediaService) {
 
     @RequestMapping(
         path = ["/{mediaId}/{fileName}/index.m3u8"],
-        method = [RequestMethod.GET],
-        produces = [MediaType.APPLICATION_OCTET_STREAM_VALUE]
+        method = [RequestMethod.GET]
     )
     fun getIndex(@PathVariable(value = "mediaId", required = true) mediaId: Long,
               @PathVariable(value = "fileName", required = true) fileName: String,
@@ -44,8 +42,7 @@ class MediaStreamController(val mediaService: MediaService) {
 
     @RequestMapping(
         path = ["/{mediaId}/{fileName}/{segment}"],
-        method = [RequestMethod.GET],
-        produces = [MediaType.APPLICATION_OCTET_STREAM_VALUE]
+        method = [RequestMethod.GET]
     )
     fun getSegment(@PathVariable(value = "mediaId", required = true) mediaId: Long,
               @PathVariable(value = "fileName", required = true) fileName: String,

@@ -5,25 +5,21 @@
     <title>Плеер: <span th:text="${media.name}">Media Player</span></title>
     <!-- Подключаем hls.js для воспроизведения HLS-потока -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script th:src="@{/bundle.js}"></script>
 </head>
 <body>
 <h1 th:text="${media.name}">Media Title</h1>
 <video id="videoPlayer" width="640" height="360" controls autoPlay>
     Ваш браузер не поддерживает видео.
 </video>
-<div>
-    <h3>Аудиодорожки:</h3>
-    <ul>
-        <li th:each="audio,iStat : ${media.audioTracks}">
-            <span th:text="${audio.name}">Audio Track</span>
-            <audio th:id="'audioPlayer_' + ${iStat.index}">
-                Ваш браузер не поддерживает аудио.
-            </audio>
-            <button th:id ="'audioPlayerMute_' + ${iStat.index}">Mute</button>
-            <button th:id ="'audioPlayerSolo_' + ${iStat.index}" >Solo</button>
-        </li>
-    </ul>
-</div>
+<stemplayer-js>
+    <stemplayer-js-controls label="Controls"></stemplayer-js-controls>
+    <stemplayer-js-stem
+            th:each="audio : ${media.audioTracks}"
+            th:label="${audio.name}"
+            th:src="${audio.streamUrl}">
+    </stemplayer-js-stem>
+</stemplayer-js>
 
 <script th:inline="javascript">
     /*<![CDATA[*/
@@ -34,69 +30,6 @@
 <script>
     const video = document.getElementById('videoPlayer');
     videoHls = initHlsPlayer(video, media.videoTrack.streamUrl);
-
-    const audioPlayers = document.querySelectorAll('audio[id^="audioPlayer_"]');
-    audioPlayers.forEach((audioPlayer, index) => {
-        const audioTrack = media.audioTracks[index];
-        if (audioTrack) {
-            initHlsPlayer(audioPlayer, audioTrack.streamUrl);
-        }
-        const muteButton = document.getElementById(`audioPlayerMute_${index}`);
-        const soloButton = document.getElementById(`audioPlayerSolo_${index}`);
-
-        muteButton.addEventListener('click', () => {
-            audioPlayer.muted = !audioPlayer.muted;
-            muteButton.textContent = audioPlayer.muted ? 'Unmute' : 'Mute';
-            audioPlayer.currentTime = video.currentTime;
-        });
-
-        soloButton.addEventListener('click', () => {
-            audioPlayers.forEach((otherAudioPlayer, otherIndex) => {
-                if (otherIndex !== index) {
-                    otherAudioPlayer.muted = true;
-                }
-            });
-            audioPlayer.muted = false;
-            audioPlayer.currentTime = video.currentTime;
-        });
-    });
-
-    video.onplay = function() {
-        audioPlayers.forEach((audioPlayer) => {
-            audioPlayer.currentTime = video.currentTime;
-            audioPlayer.play();
-        });
-    };
-
-    video.onpause = function() {
-        audioPlayers.forEach((audioPlayer) => {
-            audioPlayer.pause();
-        });
-    };
-
-    video.onended = function() {
-        audioPlayers.forEach((audioPlayer) => {
-            audioPlayer.pause();
-        });
-    };
-
-    // Событие timeupdate: постоянно корректируем аудио дорожки, если возникает рассинхронизация
-    video.addEventListener('timeupdate', function() {
-        const videoTime = video.currentTime;
-        audioPlayers.forEach((audioPlayer) => {
-            if (!audioPlayer.paused && Math.abs(audioPlayer.currentTime - videoTime) > 30) {
-                audioPlayer.currentTime = videoTime;
-            }
-        });
-    });
-
-    // Событие seeking: моментально синхронизируем аудио при перемотке видео
-    video.addEventListener('seeking', function() {
-        const videoTime = video.currentTime;
-        audioPlayers.forEach((audioPlayer) => {
-            audioPlayer.currentTime = videoTime;
-        });
-    });
 
     function initHlsPlayer(element, url) {
         if (Hls.isSupported()) {
